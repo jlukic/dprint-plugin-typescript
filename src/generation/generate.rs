@@ -5522,9 +5522,7 @@ fn gen_array_type<'a>(node: &TsArrayType<'a>, context: &mut Context<'a>) -> Prin
   items
 }
 
-fn gen_conditional_type<'a>(node: &'a TsConditionalType, context: &mut Context<'a>) -> PrintItems {
-  let use_new_lines =
-    !context.config.conditional_type_prefer_single_line && node_helpers::get_use_new_lines_for_nodes(&node.true_type, &node.false_type, context.program);
+fn gen_conditional_type<'a>(node: &TsConditionalType<'a>, context: &mut Context<'a>) -> PrintItems {
   let top_most_data = get_top_most_data(node, context);
   let is_parent_conditional_type = node.parent().kind() == NodeKind::TsConditionalType;
   let line_per_expression = context.config.conditional_type_line_per_expression;
