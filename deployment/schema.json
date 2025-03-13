@@ -65,11 +65,14 @@
       "type": "string",
       "default": "preserve",
       "oneOf": [{
-        "const": "preserve",
-        "description": "Preserve quotes around property names."
-      }, {
         "const": "asNeeded",
         "description": "Remove unnecessary quotes around property names."
+      }, {
+        "const": "consistent",
+        "description": "Same as 'asNeeded', but if one property requires quotes then quote them all."
+      }, {
+        "const": "preserve",
+        "description": "Preserve quotes around property names."
       }]
     },
     "jsx.multiLineParens": {
@@ -281,14 +284,32 @@
     },
     "forceMultiLineSpecifiers": {
       "description": "If code import/export specifiers should be forced to be on multiple lines.",
-      "type": "boolean",
-      "default": false,
+      "type": "string",
+      "default": "never",
       "oneOf": [{
-        "const": true,
+        "const": "always",
         "description": ""
       }, {
-        "const": false,
+        "const": "never",
         "description": ""
+      }, {
+        "const": "whenMultiple",
+        "description": "Force multiple lines only if importing more than one thing."
+      }]
+    },
+    "typeOnlyImportsExportsSortOrder": {
+      "description": "The kind of sort ordering to use for typed imports and exports.",
+      "type": "string",
+      "default": "none",
+      "oneOf": [{
+        "const": "first",
+        "description": "Puts type-only named imports and exports first."
+      }, {
+        "const": "last",
+        "description": "Puts type-only named imports and exports last."
+      }, {
+        "const": "none",
+        "description": "Does not sort based on if a type-only named import or export."
       }]
     },
     "sortOrder": {
@@ -901,6 +922,9 @@
     "arrayPattern.spaceAround": {
       "$ref": "#/definitions/spaceAround"
     },
+    "catchClause.spaceAround": {
+      "$ref": "#/definitions/spaceAround"
+    },
     "doWhileStatement.spaceAround": {
       "$ref": "#/definitions/spaceAround"
     },
@@ -917,6 +941,9 @@
       "$ref": "#/definitions/spaceAround"
     },
     "parameters.spaceAround": {
+      "$ref": "#/definitions/spaceAround"
+    },
+    "parenExpression.spaceAround": {
       "$ref": "#/definitions/spaceAround"
     },
     "switchStatement.spaceAround": {
@@ -1024,8 +1051,14 @@
     "exportDeclaration.sortNamedExports": {
       "$ref": "#/definitions/sortOrder"
     },
+    "exportDeclaration.sortTypeOnlyExports": {
+      "$ref": "#/definitions/typeOnlyImportsExportsSortOrder"
+    },
     "importDeclaration.sortNamedImports": {
       "$ref": "#/definitions/sortOrder"
+    },
+    "importDeclaration.sortTypeOnlyImports": {
+      "$ref": "#/definitions/typeOnlyImportsExportsSortOrder"
     },
     "ignoreNodeCommentText": {
       "description": "The text to use for an ignore comment (ex. `// dprint-ignore`).",

@@ -149,28 +149,28 @@ fn get_inner_range_for_object_like(range: &SourceRange) -> SourceRange {
 }
 
 pub trait NodeExtensions<'a> {
-  fn get_type_parameters(&self) -> &Option<&'a TsTypeParamDecl>;
+  fn get_type_parameters(&self) -> Option<&'a TsTypeParamDecl<'a>>;
 }
 
 impl<'a> NodeExtensions<'a> for Node<'a> {
-  fn get_type_parameters(&self) -> &Option<&'a TsTypeParamDecl> {
+  fn get_type_parameters(&self) -> Option<&'a TsTypeParamDecl<'a>> {
     match self {
-      Node::ClassDecl(node) => &node.class.type_params,
-      Node::Class(node) => &node.type_params,
-      Node::TsInterfaceDecl(node) => &node.type_params,
-      Node::ClassExpr(node) => &node.class.type_params,
-      Node::FnDecl(node) => &node.function.type_params,
-      Node::Function(node) => &node.type_params,
-      Node::ClassMethod(node) => &node.function.type_params,
-      Node::TsTypeAliasDecl(node) => &node.type_params,
-      Node::ArrowExpr(node) => &node.type_params,
-      Node::TsCallSignatureDecl(node) => &node.type_params,
-      Node::TsConstructSignatureDecl(node) => &node.type_params,
-      Node::TsMethodSignature(node) => &node.type_params,
-      Node::MethodProp(node) => &node.function.type_params,
-      Node::TsConstructorType(node) => &node.type_params,
-      Node::TsFnType(node) => &node.type_params,
-      _ => &None,
+      Node::ClassDecl(node) => node.class.type_params,
+      Node::Class(node) => node.type_params,
+      Node::TsInterfaceDecl(node) => node.type_params,
+      Node::ClassExpr(node) => node.class.type_params,
+      Node::FnDecl(node) => node.function.type_params,
+      Node::Function(node) => node.type_params,
+      Node::ClassMethod(node) => node.function.type_params,
+      Node::TsTypeAliasDecl(node) => node.type_params,
+      Node::ArrowExpr(node) => node.type_params,
+      Node::TsCallSignatureDecl(node) => node.type_params,
+      Node::TsConstructSignatureDecl(node) => node.type_params,
+      Node::TsMethodSignature(node) => node.type_params,
+      Node::MethodProp(node) => node.function.type_params,
+      Node::TsConstructorType(node) => node.type_params,
+      Node::TsFnType(node) => node.type_params,
+      _ => None,
     }
   }
 }
@@ -392,27 +392,30 @@ pub enum CallOrOptCallExpr<'a> {
 
 impl<'a> CallOrOptCallExpr<'a> {
   pub fn is_optional(&self) -> bool {
-    matches!(self, CallOrOptCallExpr::OptCall(_))
+    let Self::OptCall(opt_call) = self else {
+      return false;
+    };
+    opt_call.parent().optional()
   }
 
   pub fn type_args(&self) -> Option<&'a TsTypeParamInstantiation<'a>> {
     match self {
-      CallOrOptCallExpr::CallExpr(node) => node.type_args,
-      CallOrOptCallExpr::OptCall(node) => node.type_args,
+      Self::CallExpr(node) => node.type_args,
+      Self::OptCall(node) => node.type_args,
     }
   }
 
-  pub fn args(&self) -> &Vec<&'a ExprOrSpread<'a>> {
+  pub fn args(&self) -> &[&'a ExprOrSpread<'a>] {
     match self {
-      CallOrOptCallExpr::CallExpr(node) => &node.args,
-      CallOrOptCallExpr::OptCall(node) => &node.args,
+      Self::CallExpr(node) => node.args,
+      Self::OptCall(node) => node.args,
     }
   }
 
   pub fn callee(&self) -> Callee<'a> {
     match self {
-      CallOrOptCallExpr::CallExpr(node) => node.callee,
-      CallOrOptCallExpr::OptCall(node) => Callee::Expr(node.callee),
+      Self::CallExpr(node) => node.callee,
+      Self::OptCall(node) => Callee::Expr(node.callee),
     }
   }
 }
@@ -420,28 +423,28 @@ impl<'a> CallOrOptCallExpr<'a> {
 impl<'a> SourceRanged for CallOrOptCallExpr<'a> {
   fn start(&self) -> SourcePos {
     match self {
-      CallOrOptCallExpr::CallExpr(node) => node.start(),
-      CallOrOptCallExpr::OptCall(node) => node.start(),
+      Self::CallExpr(node) => node.start(),
+      Self::OptCall(node) => node.start(),
     }
   }
 
   fn end(&self) -> SourcePos {
     match self {
-      CallOrOptCallExpr::CallExpr(node) => node.end(),
-      CallOrOptCallExpr::OptCall(node) => node.end(),
+      Self::CallExpr(node) => node.end(),
+      Self::OptCall(node) => node.end(),
     }
   }
 }
 
 impl<'a> From<&'a CallExpr<'a>> for CallOrOptCallExpr<'a> {
   fn from(call_expr: &'a CallExpr<'a>) -> Self {
-    CallOrOptCallExpr::CallExpr(call_expr)
+    Self::CallExpr(call_expr)
   }
 }
 
 impl<'a> From<&'a OptCall<'a>> for CallOrOptCallExpr<'a> {
   fn from(opt_call: &'a OptCall<'a>) -> Self {
-    CallOrOptCallExpr::OptCall(opt_call)
+    Self::OptCall(opt_call)
   }
 }
 
@@ -449,8 +452,8 @@ impl<'a> From<&'a OptCall<'a>> for CallOrOptCallExpr<'a> {
 impl<'a> Into<Node<'a>> for CallOrOptCallExpr<'a> {
   fn into(self) -> Node<'a> {
     match self {
-      CallOrOptCallExpr::CallExpr(node) => node.into(),
-      CallOrOptCallExpr::OptCall(node) => node.into(),
+      Self::CallExpr(node) => node.into(),
+      Self::OptCall(node) => node.into(),
     }
   }
 }

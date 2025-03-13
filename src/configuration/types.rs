@@ -57,6 +57,20 @@ pub enum TrailingCommas {
 
 generate_str_to_from![TrailingCommas, [Always, "always"], [Never, "never"], [OnlyMultiLine, "onlyMultiLine"]];
 
+/// Force multilines possibilities.
+#[derive(Clone, PartialEq, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ForceMultiLine {
+  /// Multiline imports/exports should not be forced.
+  Never,
+  /// Always force multiline imports/exports.
+  Always,
+  /// Mulitline imports/exports should be forced only when importing/exporting multiple items.
+  WhenMultiple,
+}
+
+generate_str_to_from![ForceMultiLine, [Always, "always"], [Never, "never"], [WhenMultiple, "whenMultiple"]];
+
 /// Where to place the opening brace.
 #[derive(Clone, PartialEq, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -225,13 +239,15 @@ generate_str_to_from![JsxQuoteStyle, [PreferDouble, "preferDouble"], [PreferSing
 #[derive(Clone, PartialEq, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum QuoteProps {
-  /// Preserve quotes around property names.
-  Preserve,
   /// Remove unnecessary quotes around property names.
   AsNeeded,
+  /// Same as `AsNeeded`, but if one property requires quotes then quote them all.
+  Consistent,
+  /// Preserve quotes around property names.
+  Preserve,
 }
 
-generate_str_to_from![QuoteProps, [Preserve, "preserve"], [AsNeeded, "asNeeded"]];
+generate_str_to_from![QuoteProps, [AsNeeded, "asNeeded"], [Consistent, "consistent"], [Preserve, "preserve"]];
 
 /// Whether to surround a JSX element or fragment with parentheses
 /// when it's the top JSX node and it spans multiple lines.
@@ -280,6 +296,17 @@ generate_str_to_from![
   [CaseInsensitive, "caseInsensitive"]
 ];
 
+#[derive(Copy, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum NamedTypeImportsExportsOrder {
+  First,
+  Last,
+  #[default]
+  None,
+}
+
+generate_str_to_from![NamedTypeImportsExportsOrder, [First, "first"], [Last, "last"], [None, "none"]];
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Configuration {
@@ -290,6 +317,7 @@ pub struct Configuration {
   pub quote_style: QuoteStyle,
   pub quote_props: QuoteProps,
   pub semi_colons: SemiColons,
+  pub file_indent_level: u32,
   /* situational */
   #[serde(rename = "arrowFunction.useParentheses")]
   pub arrow_function_use_parentheses: UseParentheses,
@@ -322,8 +350,12 @@ pub struct Configuration {
   pub module_sort_export_declarations: SortOrder,
   #[serde(rename = "importDeclaration.sortNamedImports")]
   pub import_declaration_sort_named_imports: SortOrder,
+  #[serde(rename = "importDeclaration.sortTypeOnlyImports")]
+  pub import_declaration_sort_type_only_imports: NamedTypeImportsExportsOrder,
   #[serde(rename = "exportDeclaration.sortNamedExports")]
   pub export_declaration_sort_named_exports: SortOrder,
+  #[serde(rename = "exportDeclaration.sortTypeOnlyExports")]
+  pub export_declaration_sort_type_only_exports: NamedTypeImportsExportsOrder,
   /* ignore comments */
   pub ignore_node_comment_text: String,
   pub ignore_file_comment_text: String,
@@ -546,9 +578,9 @@ pub struct Configuration {
   pub export_declaration_force_single_line: bool,
   /* force multi line specifiers */
   #[serde(rename = "exportDeclaration.forceMultiLine")]
-  pub export_declaration_force_multi_line: bool,
+  pub export_declaration_force_multi_line: ForceMultiLine,
   #[serde(rename = "importDeclaration.forceMultiLine")]
-  pub import_declaration_force_multi_line: bool,
+  pub import_declaration_force_multi_line: ForceMultiLine,
 
   /* use space separator */
   #[serde(rename = "binaryExpression.spaceSurroundingBitwiseAndArithmeticOperator")]
@@ -615,6 +647,8 @@ pub struct Configuration {
   pub array_expression_space_around: bool,
   #[serde(rename = "arrayPattern.spaceAround")]
   pub array_pattern_space_around: bool,
+  #[serde(rename = "catchClause.spaceAround")]
+  pub catch_clause_space_around: bool,
   #[serde(rename = "doWhileStatement.spaceAround")]
   pub do_while_statement_space_around: bool,
   #[serde(rename = "forInStatement.spaceAround")]
@@ -627,6 +661,8 @@ pub struct Configuration {
   pub if_statement_space_around: bool,
   #[serde(rename = "parameters.spaceAround")]
   pub parameters_space_around: bool,
+  #[serde(rename = "parenExpression.spaceAround")]
+  pub paren_expression_space_around: bool,
   #[serde(rename = "switchStatement.spaceAround")]
   pub switch_statement_space_around: bool,
   #[serde(rename = "tupleType.spaceAround")]

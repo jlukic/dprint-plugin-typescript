@@ -34,7 +34,7 @@ impl ConfigurationBuilder {
     if let Some(global_config) = &self.global_config {
       resolve_config(self.config.clone(), global_config).config
     } else {
-      let global_config = resolve_global_config(ConfigKeyMap::new(), &Default::default()).config;
+      let global_config = GlobalConfiguration::default();
       resolve_config(self.config.clone(), &global_config).config
     }
   }
@@ -69,6 +69,8 @@ impl ConfigurationBuilder {
       .ignore_file_comment_text("deno-fmt-ignore-file")
       .module_sort_import_declarations(SortOrder::Maintain)
       .module_sort_export_declarations(SortOrder::Maintain)
+      .export_declaration_sort_type_only_exports(NamedTypeImportsExportsOrder::None)
+      .import_declaration_sort_type_only_imports(NamedTypeImportsExportsOrder::None)
   }
 
   /// The width of a line the printer will try to stay under. Note that the printer may exceed this width in certain cases.
@@ -199,6 +201,15 @@ impl ConfigurationBuilder {
   /// Default: SingleBodyPosition::Maintain
   pub fn single_body_position(&mut self, value: SameOrNextLinePosition) -> &mut Self {
     self.insert("singleBodyPosition", value.to_string().into())
+  }
+
+  /// Amount of indents to use for the whole file.
+  ///
+  /// This should only be set by tools that need to indent all the code in the file.
+  ///
+  /// Default: `0`
+  pub fn file_indent_level(&mut self, value: u16) -> &mut Self {
+    self.insert("fileIndentLevel", (value as i32).into())
   }
 
   /// If trailing commas should be used.
@@ -544,11 +555,25 @@ impl ConfigurationBuilder {
     self.insert("importDeclaration.sortNamedImports", value.to_string().into())
   }
 
+  /// Sorts type-only named imports first, last, or none (no sorting).
+  ///
+  /// Default: Last
+  pub fn import_declaration_sort_type_only_imports(&mut self, value: NamedTypeImportsExportsOrder) -> &mut Self {
+    self.insert("importDeclaration.sortTypeOnlyImports", value.to_string().into())
+  }
+
   /// Alphabetically sorts the export declaration's named exports.
   ///
   /// Default: Case insensitive
   pub fn export_declaration_sort_named_exports(&mut self, value: SortOrder) -> &mut Self {
     self.insert("exportDeclaration.sortNamedExports", value.to_string().into())
+  }
+
+  /// Sorts type-only named exports first, last, or none (no sorting).
+  ///
+  /// Default: Last
+  pub fn export_declaration_sort_type_only_exports(&mut self, value: NamedTypeImportsExportsOrder) -> &mut Self {
+    self.insert("exportDeclaration.sortTypeOnlyExports", value.to_string().into())
   }
 
   /* ignore comments */
@@ -777,12 +802,12 @@ impl ConfigurationBuilder {
 
   /* force multi line specifiers */
 
-  pub fn export_declaration_force_multi_line(&mut self, value: bool) -> &mut Self {
-    self.insert("exportDeclaration.forceMultiLine", value.into())
+  pub fn export_declaration_force_multi_line(&mut self, value: ForceMultiLine) -> &mut Self {
+    self.insert("exportDeclaration.forceMultiLine", value.to_string().into())
   }
 
-  pub fn import_declaration_force_multi_line(&mut self, value: bool) -> &mut Self {
-    self.insert("importDeclaration.forceMultiLine", value.into())
+  pub fn import_declaration_force_multi_line(&mut self, value: ForceMultiLine) -> &mut Self {
+    self.insert("importDeclaration.forceMultiLine", value.to_string().into())
   }
 
   /* member spacing */
@@ -1026,6 +1051,10 @@ impl ConfigurationBuilder {
     self.insert("arrayPattern.spaceAround", value.into())
   }
 
+  pub fn catch_clause_space_around(&mut self, value: bool) -> &mut Self {
+    self.insert("catchClause.spaceAround", value.into())
+  }
+
   pub fn do_while_statement_space_around(&mut self, value: bool) -> &mut Self {
     self.insert("doWhileStatement.spaceAround", value.into())
   }
@@ -1048,6 +1077,10 @@ impl ConfigurationBuilder {
 
   pub fn parameters_space_around(&mut self, value: bool) -> &mut Self {
     self.insert("parameters.spaceAround", value.into())
+  }
+
+  pub fn paren_expression_space_around(&mut self, value: bool) -> &mut Self {
+    self.insert("parenExpression.spaceAround", value.into())
   }
 
   pub fn switch_statement_space_around(&mut self, value: bool) -> &mut Self {
@@ -1099,6 +1132,7 @@ mod tests {
       .operator_position(OperatorPosition::SameLine)
       .single_body_position(SameOrNextLinePosition::SameLine)
       .trailing_commas(TrailingCommas::Never)
+      .file_indent_level(1)
       .use_braces(UseBraces::WhenNotSingleLine)
       .quote_props(QuoteProps::AsNeeded)
       .prefer_hanging(false)
@@ -1116,6 +1150,8 @@ mod tests {
       .module_sort_export_declarations(SortOrder::Maintain)
       .import_declaration_sort_named_imports(SortOrder::Maintain)
       .export_declaration_sort_named_exports(SortOrder::Maintain)
+      .import_declaration_sort_type_only_imports(NamedTypeImportsExportsOrder::First)
+      .export_declaration_sort_type_only_exports(NamedTypeImportsExportsOrder::None)
       /* ignore comments */
       .ignore_node_comment_text("ignore")
       .ignore_file_comment_text("ignore-file")
@@ -1234,8 +1270,8 @@ mod tests {
       .export_declaration_force_single_line(true)
       .import_declaration_force_single_line(true)
       /* force multi line specifiers */
-      .export_declaration_force_multi_line(true)
-      .import_declaration_force_multi_line(true)
+      .export_declaration_force_multi_line(ForceMultiLine::Always)
+      .import_declaration_force_multi_line(ForceMultiLine::Always)
       /* space settings */
       .binary_expression_space_surrounding_bitwise_and_arithmetic_operator(true)
       .comment_line_force_space_after_slashes(false)
@@ -1270,12 +1306,14 @@ mod tests {
       .arguments_space_around(true)
       .array_expression_space_around(true)
       .array_pattern_space_around(true)
+      .catch_clause_space_around(true)
       .do_while_statement_space_around(true)
       .for_in_statement_space_around(true)
       .for_of_statement_space_around(true)
       .for_statement_space_around(true)
       .if_statement_space_around(true)
       .parameters_space_around(true)
+      .paren_expression_space_around(true)
       .switch_statement_space_around(true)
       .tuple_type_space_around(true)
       .while_statement_space_around(true);

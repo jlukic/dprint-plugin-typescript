@@ -11,8 +11,8 @@ use dprint_core::configuration::*;
 /// use dprint_core::configuration::resolve_global_config;
 /// use dprint_plugin_typescript::configuration::resolve_config;
 ///
-/// let config_map = ConfigKeyMap::new(); // get a collection of key value pairs from somewhere
-/// let global_config_result = resolve_global_config(config_map, &Default::default());
+/// let mut config_map = ConfigKeyMap::new(); // get a collection of key value pairs from somewhere
+/// let global_config_result = resolve_global_config(&mut config_map);
 ///
 /// // check global_config_result.diagnostics here...
 ///
@@ -92,6 +92,7 @@ pub fn resolve_config(config: ConfigKeyMap, global_config: &GlobalConfiguration)
     quote_style,
     quote_props,
     semi_colons,
+    file_indent_level: get_value(&mut config, "fileIndentLevel", 0, &mut diagnostics),
     /* situational */
     arrow_function_use_parentheses: get_value(&mut config, "arrowFunction.useParentheses", UseParentheses::Maintain, &mut diagnostics),
     binary_expression_line_per_expression: get_value(&mut config, "binaryExpression.linePerExpression", false, &mut diagnostics),
@@ -120,6 +121,18 @@ pub fn resolve_config(config: ConfigKeyMap, global_config: &GlobalConfiguration)
     module_sort_export_declarations: get_value(&mut config, "module.sortExportDeclarations", SortOrder::CaseInsensitive, &mut diagnostics),
     import_declaration_sort_named_imports: get_value(&mut config, "importDeclaration.sortNamedImports", SortOrder::CaseInsensitive, &mut diagnostics),
     export_declaration_sort_named_exports: get_value(&mut config, "exportDeclaration.sortNamedExports", SortOrder::CaseInsensitive, &mut diagnostics),
+    import_declaration_sort_type_only_imports: get_value(
+      &mut config,
+      "importDeclaration.sortTypeOnlyImports",
+      NamedTypeImportsExportsOrder::None,
+      &mut diagnostics,
+    ),
+    export_declaration_sort_type_only_exports: get_value(
+      &mut config,
+      "exportDeclaration.sortTypeOnlyExports",
+      NamedTypeImportsExportsOrder::None,
+      &mut diagnostics,
+    ),
     /* ignore comments */
     ignore_node_comment_text: get_value(&mut config, "ignoreNodeCommentText", String::from("dprint-ignore"), &mut diagnostics),
     ignore_file_comment_text: get_value(&mut config, "ignoreFileCommentText", String::from("dprint-ignore-file"), &mut diagnostics),
@@ -258,8 +271,8 @@ pub fn resolve_config(config: ConfigKeyMap, global_config: &GlobalConfiguration)
     import_declaration_force_single_line: get_value(&mut config, "importDeclaration.forceSingleLine", false, &mut diagnostics),
     export_declaration_force_single_line: get_value(&mut config, "exportDeclaration.forceSingleLine", false, &mut diagnostics),
     /* force multi line specifiers */
-    import_declaration_force_multi_line: get_value(&mut config, "importDeclaration.forceMultiLine", false, &mut diagnostics),
-    export_declaration_force_multi_line: get_value(&mut config, "exportDeclaration.forceMultiLine", false, &mut diagnostics),
+    import_declaration_force_multi_line: get_value(&mut config, "importDeclaration.forceMultiLine", ForceMultiLine::Never, &mut diagnostics),
+    export_declaration_force_multi_line: get_value(&mut config, "exportDeclaration.forceMultiLine", ForceMultiLine::Never, &mut diagnostics),
     /* space settings */
     binary_expression_space_surrounding_bitwise_and_arithmetic_operator: get_value(
       &mut config,
@@ -313,12 +326,14 @@ pub fn resolve_config(config: ConfigKeyMap, global_config: &GlobalConfiguration)
     arguments_space_around: get_value(&mut config, "arguments.spaceAround", space_around, &mut diagnostics),
     array_expression_space_around: get_value(&mut config, "arrayExpression.spaceAround", space_around, &mut diagnostics),
     array_pattern_space_around: get_value(&mut config, "arrayPattern.spaceAround", space_around, &mut diagnostics),
+    catch_clause_space_around: get_value(&mut config, "catchClause.spaceAround", space_around, &mut diagnostics),
     do_while_statement_space_around: get_value(&mut config, "doWhileStatement.spaceAround", space_around, &mut diagnostics),
     for_in_statement_space_around: get_value(&mut config, "forInStatement.spaceAround", space_around, &mut diagnostics),
     for_of_statement_space_around: get_value(&mut config, "forOfStatement.spaceAround", space_around, &mut diagnostics),
     for_statement_space_around: get_value(&mut config, "forStatement.spaceAround", space_around, &mut diagnostics),
     if_statement_space_around: get_value(&mut config, "ifStatement.spaceAround", space_around, &mut diagnostics),
     parameters_space_around: get_value(&mut config, "parameters.spaceAround", space_around, &mut diagnostics),
+    paren_expression_space_around: get_value(&mut config, "parenExpression.spaceAround", space_around, &mut diagnostics),
     switch_statement_space_around: get_value(&mut config, "switchStatement.spaceAround", space_around, &mut diagnostics),
     tuple_type_space_around: get_value(&mut config, "tupleType.spaceAround", space_around, &mut diagnostics),
     while_statement_space_around: get_value(&mut config, "whileStatement.spaceAround", space_around, &mut diagnostics),
@@ -365,7 +380,7 @@ mod tests {
     global_config.insert(String::from("indentWidth"), ConfigKeyValue::from_i32(8));
     global_config.insert(String::from("newLineKind"), ConfigKeyValue::from_str("crlf"));
     global_config.insert(String::from("useTabs"), ConfigKeyValue::from_bool(true));
-    let global_config = resolve_global_config(global_config, &Default::default()).config;
+    let global_config = resolve_global_config(&mut global_config).config;
     let mut config_builder = ConfigurationBuilder::new();
     let config = config_builder.global_config(global_config).build();
     assert_eq!(config.line_width, 80);
@@ -378,7 +393,7 @@ mod tests {
   fn handle_deno_config() {
     let mut config = ConfigKeyMap::new();
     config.insert(String::from("deno"), ConfigKeyValue::from_bool(true));
-    let global_config = resolve_global_config(ConfigKeyMap::new(), &Default::default()).config;
+    let global_config = GlobalConfiguration::default();
     let result = resolve_config(config, &global_config);
     let expected_config = ConfigurationBuilder::new().deno().build();
     // todo: test that both objects equal each other
@@ -392,7 +407,7 @@ mod tests {
     let mut config = ConfigKeyMap::new();
     config.insert(String::from("deno"), ConfigKeyValue::from_bool(true));
     config.insert(String::from("indentWidth"), ConfigKeyValue::from_i32(8));
-    let global_config = resolve_global_config(ConfigKeyMap::new(), &Default::default()).config;
+    let global_config = GlobalConfiguration::default();
     let result = resolve_config(config, &global_config);
     let expected_config = ConfigurationBuilder::new().deno().build();
     assert_eq!(result.config.indent_width, 8);
